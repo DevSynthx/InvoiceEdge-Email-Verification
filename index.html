@@ -115,8 +115,14 @@
         <p>You're being redirected to complete your email verification. Please ensure you're on your mobile device for
             seamless redirection to the app.</p>
         <a href="#" onclick="redirectToApp(); return false;" class="button">Redirect to App</a>
+        <br><br>
+        <!-- Chrome Intent Fallback Link -->
+        <a href="intent://verify?userId=xxx&secret=yyy#Intent;scheme=invoiceedge;package=invoice_edge.co;end"
+            class="button">
+            Open in App via Intent (Chrome)
+        </a>
         <p class="warning">Note: If you're viewing this on a desktop computer, please open this link on your mobile
-            device where PawBey is installed.</p>
+            device where InvoiceEdge is installed.</p>
     </div>
 </body>
 
