@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PawBey Email Verification</title>
+    <title>InvoiceEdge Email Verification</title>
     <style>
         body {
             margin: 0;
@@ -86,7 +86,7 @@
             const secret = sessionStorage.getItem('invoice_secret');
 
             if (userId && secret) {
-                window.location.href = `pawbey://verify?userId=${userId}&secret=${secret}`;
+                window.location.href = `invoiceedge://verify?userId=${userId}&secret=${secret}`;
 
                 // Clear the session storage after redirecting
                 setTimeout(() => {
