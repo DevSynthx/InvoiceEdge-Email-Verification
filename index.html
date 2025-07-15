@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PawBey Email Verification</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 600px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            margin: 1rem;
+        }
+
+        h1 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 2.5rem;
+        }
+
+        p {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .button {
+            background-color: #4299e1;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            text-decoration: none;
+            display: inline-block;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+
+        .button:hover {
+            background-color: #3182ce;
+        }
+
+        .warning {
+            color: #e53e3e;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+        }
+    </style>
+    <script>
+        // Store the verification data in session storage when the page loads
+        document.addEventListener('DOMContentLoaded', function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const userId = urlParams.get('userId');
+            const secret = urlParams.get('secret');
+
+            // Store parameters in session storage (more secure than keeping in URL)
+            if (userId && secret) {
+                sessionStorage.setItem('invoice_userId', userId);
+                sessionStorage.setItem('invoice_secret', secret);
+
+                // Remove parameters from URL without refreshing the page
+                const cleanUrl = window.location.protocol + "//" +
+                    window.location.host +
+                    window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+            }
+        });
+
+        function redirectToApp() {
+            // Retrieve data from session storage
+            const userId = sessionStorage.getItem('invoice_userId');
+            const secret = sessionStorage.getItem('invoice_secret');
+
+            if (userId && secret) {
+                window.location.href = `pawbey://verify?userId=${userId}&secret=${secret}`;
+
+                // Clear the session storage after redirecting
+                setTimeout(() => {
+                    sessionStorage.removeItem('invoice_userId');
+                    sessionStorage.removeItem('invoice_secret');
+                }, 1000);
+            } else {
+                alert("Verification information is missing. Please check your verification link");
+            }
+        }
+
+        // Auto redirect after a short delay
+        setTimeout(function () {
+            const hasParams = sessionStorage.getItem('invoice_userId') &&
+                sessionStorage.getItem('invoice_secret');
+            if (hasParams) {
+                redirectToApp();
+            }
+        }, 1500);
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Welcome to PawBey!</h1>
+        <p>You're being redirected to complete your email verification. Please ensure you're on your mobile device for
+            seamless redirection to the app.</p>
+        <a href="#" onclick="redirectToApp(); return false;" class="button">Redirect to App</a>
+        <p class="warning">Note: If you're viewing this on a desktop computer, please open this link on your mobile
+            device where PawBey is installed.</p>
+    </div>
+</body>
+
+</html>
