@@ -48,6 +48,8 @@
             display: inline-block;
             font-weight: 600;
             transition: background-color 0.2s;
+            cursor: pointer;
+            border: none;
         }
 
         .button:hover {
@@ -56,6 +58,12 @@
 
         .warning {
             color: #e53e3e;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+        }
+
+        .success {
+            color: #38a169;
             font-size: 0.875rem;
             margin-top: 1rem;
         }
@@ -69,80 +77,10 @@
             font-family: monospace;
             font-size: 0.875rem;
             text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
         }
     </style>
-    <script>
-        // Store the verification data in session storage when the page loads
-        document.addEventListener('DOMContentLoaded', function () {
-            const urlParams = new URLSearchParams(window.location.search);
-            const userId = urlParams.get('userId');
-            const secret = urlParams.get('secret');
-
-            // Debug: Show what parameters we received
-            console.log('URL Parameters:', { userId, secret });
-
-            // Show debug info on page
-            const debugDiv = document.getElementById('debug-info');
-            if (debugDiv) {
-                debugDiv.innerHTML = `
-                    <strong>Debug Info:</strong><br>
-                    UserId: ${userId || 'Not found'}<br>
-                    Secret: ${secret || 'Not found'}<br>
-                    Full URL: ${window.location.href}
-                `;
-            }
-
-            // Store parameters in session storage (more secure than keeping in URL)
-            if (userId && secret) {
-                sessionStorage.setItem('invoice_userId', userId);
-                sessionStorage.setItem('invoice_secret', secret);
-
-                // Remove parameters from URL without refreshing the page
-                const cleanUrl = window.location.protocol + "//" +
-                    window.location.host +
-                    window.location.pathname;
-                window.history.replaceState({}, document.title, cleanUrl);
-            }
-        });
-
-        function redirectToApp() {
-            // Retrieve data from session storage
-            const userId = sessionStorage.getItem('invoice_userId');
-            const secret = sessionStorage.getItem('invoice_secret');
-
-            console.log('Redirecting with:', { userId, secret });
-
-            if (userId && secret) {
-                const deepLink = `invoiceedge://verify?userId=${userId}&secret=${secret}`;
-                console.log('Deep link:', deepLink);
-
-                // Try to redirect to the app
-                window.location.href = deepLink;
-
-                // Clear the session storage after redirecting
-                setTimeout(() => {
-                    sessionStorage.removeItem('invoice_userId');
-                    sessionStorage.removeItem('invoice_secret');
-                }, 1000);
-
-                // Show fallback message after a delay
-                setTimeout(() => {
-                    document.getElementById('fallback-message').style.display = 'block';
-                }, 3000);
-            } else {
-                alert("Verification information is missing. Please check your verification link");
-            }
-        }
-
-        // Auto redirect after a short delay
-        setTimeout(function () {
-            const hasParams = sessionStorage.getItem('invoice_userId') &&
-                sessionStorage.getItem('invoice_secret');
-            if (hasParams) {
-                redirectToApp();
-            }
-        }, 2000);
-    </script>
 </head>
 
 <body>
@@ -153,16 +91,131 @@
 
         <div id="debug-info" class="debug"></div>
 
-        <a href="#" onclick="redirectToApp(); return false;" class="button">Redirect to App</a>
+        <button class="button" onclick="redirectToApp()">Redirect to App</button>
 
-        <div id="fallback-message" style="display: none;">
-            <p class="warning">If the app didn't open automatically, please make sure InvoiceEdge is installed on your
-                device.</p>
-        </div>
+        <div id="status-message"></div>
 
         <p class="warning">Note: If you're viewing this on a desktop computer, please open this link on your mobile
             device where InvoiceEdge is installed.</p>
     </div>
+
+    <script>
+        let verificationData = null;
+
+        function extractParameters() {
+            let userId = null;
+            let secret = null;
+
+            // Method 1: Regular query parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            userId = urlParams.get('userId');
+            secret = urlParams.get('secret');
+
+            // Method 2: Hash fragment as query params
+            if ((!userId || !secret) && window.location.hash) {
+                const hash = window.location.hash.substring(1);
+                const hashParams = new URLSearchParams(hash);
+                userId = userId || hashParams.get('userId');
+                secret = secret || hashParams.get('secret');
+            }
+
+            // Method 3: Parse hash as complete URL
+            if ((!userId || !secret) && window.location.hash) {
+                try {
+                    const hashContent = window.location.hash.substring(1);
+                    if (hashContent.startsWith('http')) {
+                        const hashUrl = new URL(hashContent);
+                        userId = userId || hashUrl.searchParams.get('userId');
+                        secret = secret || hashUrl.searchParams.get('secret');
+                    }
+                } catch (e) {
+                    console.log('Method 3 failed:', e);
+                }
+            }
+
+            // Method 4: Manual parsing of hash content
+            if ((!userId || !secret) && window.location.hash) {
+                const hashContent = window.location.hash.substring(1);
+                const userIdMatch = hashContent.match(/userId=([^&]+)/);
+                const secretMatch = hashContent.match(/secret=([^&]+)/);
+
+                if (userIdMatch) userId = decodeURIComponent(userIdMatch[1]);
+                if (secretMatch) secret = decodeURIComponent(secretMatch[1]);
+            }
+
+            return { userId, secret };
+        }
+
+        function updateDebugInfo(data) {
+            const debugDiv = document.getElementById('debug-info');
+            if (debugDiv) {
+                debugDiv.innerHTML = `
+                    <strong>Debug Info:</strong><br>
+                    UserId: ${data.userId || 'Not found'}<br>
+                    Secret: ${data.secret ? 'Found (' + data.secret.length + ' chars)' : 'Not found'}<br>
+                    Full URL: ${window.location.href}<br>
+                    Search: ${window.location.search || 'None'}<br>
+                    Hash: ${window.location.hash || 'None'}<br>
+                    Status: ${data.userId && data.secret ? '✅ Ready' : '❌ Missing parameters'}
+                `;
+            }
+        }
+
+        function showStatus(message, isError = false) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.innerHTML = `<p class="${isError ? 'warning' : 'success'}">${message}</p>`;
+        }
+
+        function redirectToApp() {
+            if (!verificationData || !verificationData.userId || !verificationData.secret) {
+                showStatus("Verification information is missing. Please check your verification link.", true);
+                return;
+            }
+
+            const deepLink = `invoiceedge://verify?userId=${encodeURIComponent(verificationData.userId)}&secret=${encodeURIComponent(verificationData.secret)}`;
+            console.log('Attempting redirect to:', deepLink);
+
+            showStatus("Redirecting to app...");
+
+            // Create a temporary link and click it
+            const link = document.createElement('a');
+            link.href = deepLink;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Show fallback message after a delay
+            setTimeout(() => {
+                showStatus("If the app didn't open, please make sure InvoiceEdge is installed on your device.", true);
+            }, 3000);
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function () {
+            verificationData = extractParameters();
+            updateDebugInfo(verificationData);
+
+            console.log('Extracted verification data:', verificationData);
+
+            // Auto redirect after a short delay if we have the required data
+            if (verificationData.userId && verificationData.secret) {
+                showStatus("Verification data found. Redirecting automatically in 3 seconds...");
+                setTimeout(() => {
+                    redirectToApp();
+                }, 3000);
+            } else {
+                showStatus("Could not find verification parameters in the URL.", true);
+            }
+
+            // Clean up URL
+            if (window.history && window.history.replaceState) {
+                const cleanUrl = window.location.protocol + "//" +
+                    window.location.host + window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+            }
+        });
+    </script>
 </body>
 
 </html>
