@@ -59,6 +59,17 @@
             font-size: 0.875rem;
             margin-top: 1rem;
         }
+
+        .debug {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: monospace;
+            font-size: 0.875rem;
+            text-align: left;
+        }
     </style>
     <script>
         // Store the verification data in session storage when the page loads
@@ -66,6 +77,20 @@
             const urlParams = new URLSearchParams(window.location.search);
             const userId = urlParams.get('userId');
             const secret = urlParams.get('secret');
+
+            // Debug: Show what parameters we received
+            console.log('URL Parameters:', { userId, secret });
+
+            // Show debug info on page
+            const debugDiv = document.getElementById('debug-info');
+            if (debugDiv) {
+                debugDiv.innerHTML = `
+                    <strong>Debug Info:</strong><br>
+                    UserId: ${userId || 'Not found'}<br>
+                    Secret: ${secret || 'Not found'}<br>
+                    Full URL: ${window.location.href}
+                `;
+            }
 
             // Store parameters in session storage (more secure than keeping in URL)
             if (userId && secret) {
@@ -85,14 +110,25 @@
             const userId = sessionStorage.getItem('invoice_userId');
             const secret = sessionStorage.getItem('invoice_secret');
 
+            console.log('Redirecting with:', { userId, secret });
+
             if (userId && secret) {
-                window.location.href = `invoiceedge://verify?userId=${userId}&secret=${secret}`;
+                const deepLink = `invoiceedge://verify?userId=${userId}&secret=${secret}`;
+                console.log('Deep link:', deepLink);
+
+                // Try to redirect to the app
+                window.location.href = deepLink;
 
                 // Clear the session storage after redirecting
                 setTimeout(() => {
                     sessionStorage.removeItem('invoice_userId');
                     sessionStorage.removeItem('invoice_secret');
                 }, 1000);
+
+                // Show fallback message after a delay
+                setTimeout(() => {
+                    document.getElementById('fallback-message').style.display = 'block';
+                }, 3000);
             } else {
                 alert("Verification information is missing. Please check your verification link");
             }
@@ -105,7 +141,7 @@
             if (hasParams) {
                 redirectToApp();
             }
-        }, 1500);
+        }, 2000);
     </script>
 </head>
 
@@ -114,13 +150,16 @@
         <h1>Welcome to InvoiceEdge!</h1>
         <p>You're being redirected to complete your email verification. Please ensure you're on your mobile device for
             seamless redirection to the app.</p>
+
+        <div id="debug-info" class="debug"></div>
+
         <a href="#" onclick="redirectToApp(); return false;" class="button">Redirect to App</a>
-        <br><br>
-        <!-- Chrome Intent Fallback Link -->
-        <a href="intent://verify?userId=xxx&secret=yyy#Intent;scheme=invoiceedge;package=invoice_edge.co;end"
-            class="button">
-            Open in App via Intent (Chrome)
-        </a>
+
+        <div id="fallback-message" style="display: none;">
+            <p class="warning">If the app didn't open automatically, please make sure InvoiceEdge is installed on your
+                device.</p>
+        </div>
+
         <p class="warning">Note: If you're viewing this on a desktop computer, please open this link on your mobile
             device where InvoiceEdge is installed.</p>
     </div>
